@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   const { messages} = await req.json();
   const {user} = await getUser();
   const result = await streamText({
-    model: groq('mixtral-8x7b-32768'),
+    model: groq('llama-3.3-70b-versatile'),
     system:messages[0].content,
     messages: messages,
     temperature: 1,
