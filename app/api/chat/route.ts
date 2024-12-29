@@ -3,7 +3,6 @@ import { createOpenAI as createGroq } from '@ai-sdk/openai';
 import { saveChat } from '@/actions/saveChat';
 import { getServerSession } from "next-auth"
 import { NEXT_AUTH_CONFIG } from "@/lib/auth";
-
 async function getUser() {
   const session = await getServerSession(NEXT_AUTH_CONFIG);
   return session;
