@@ -1,60 +1,66 @@
-const CARTESIA_API_KEY = process.env.CARTESIA_API_KEY;
-
-if (!CARTESIA_API_KEY) {
-  throw new Error("Missing CARTESIA_API_KEY in environment variables");
-}
+// app/api/tts/route.ts
+import { CartesiaClient } from "@cartesia/cartesia-js";
+import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
+    const client = new CartesiaClient({ apiKey: process.env.CARTESIA_API_KEY });
     const { text } = await request.json();
-    console.time("cartesia request " + request.headers.get("x-vercel-id") || "local");
 
-    const voice = await fetch("https://api.cartesia.ai/tts/bytes", {
-      method: "POST",
-      headers: {
-        "Cartesia-Version": "2024-06-30",
-        "Content-Type": "application/json",
-        "X-API-Key": CARTESIA_API_KEY!,
+    const response = await client.tts.sse({
+      modelId: "sonic",
+      transcript: text,
+      voice: {
+        mode: "id",
+        id: "b7d50908-b17c-442d-ad8d-810c63997ed9",
+        experimentalControls: {
+          speed: 'normal',
+          emotion: ["anger:lowest"]
+        }
       },
-      body: JSON.stringify({
-        model_id: "sonic",
-        transcript: text,
-        voice: {
-          mode: "id",
-          id: "b7d50908-b17c-442d-ad8d-810c63997ed9",
-        },
-        output_format: {
-          container: "raw",
-          encoding: "pcm_f32le",
-          sample_rate: 24000,
-        },
-      }),
+      language: "en",
+      outputFormat: {
+        container: "raw",
+        encoding: "pcm_f32le",
+        sampleRate: 24000
+      }
     });
 
-    console.timeEnd("cartesia request " + request.headers.get("x-vercel-id") || "local");
+    const encoder = new TextEncoder();
 
-    if (!voice.ok) {
-      console.error(await voice.text());
-      return new Response("Voice synthesis failed", { status: 500 });
-    }
-
-    console.time("stream " + request.headers.get("x-vercel-id") || "local");
-    const after = (callback: () => void) => {
-      callback();
-    };
-
-    after(() => {
-      console.timeEnd("stream " + request.headers.get("x-vercel-id") || "local");
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of response) {
+            // Format and encode the chunk
+            const eventData = {
+              event: chunk.type === 'done' ? 'done' : 'chunk',
+              data: chunk
+            };
+            const eventString = `data: ${JSON.stringify(eventData)}\n\n`;
+            controller.enqueue(encoder.encode(eventString));
+            
+            if (chunk.type === 'done') {
+              controller.close();
+              break;
+            }
+          }
+        } catch (error) {
+          console.error('Stream processing error:', error);
+          controller.error(error);
+        }
+      }
     });
 
-    return new Response(voice.body, {
+    return new Response(stream, {
       headers: {
-        "X-Transcript": encodeURIComponent(text),
-        "X-Response": encodeURIComponent(text),
-      },
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+      }
     });
   } catch (error) {
-    console.error('TTS API Error:', error);
-    return new Response("Voice synthesis failed", { status: 500 });
+    console.error('TTS error:', error);
+    return NextResponse.json({ error: 'TTS processing failed' }, { status: 500 });
   }
-} 
+}

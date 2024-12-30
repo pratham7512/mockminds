@@ -11,7 +11,7 @@ export default function Chat() {
   const { messages, input, handleInputChange, handleSubmit, setMessages } = useChat({
     onFinish: async (message) => {
       if (message.role !== 'assistant') return;
-  
+    
       try {
         const response = await fetch('/api/tts', {
           method: 'POST',
@@ -20,16 +20,72 @@ export default function Chat() {
           },
           body: JSON.stringify({ text: message.content }),
         });
-
+    
         if (!response.ok) {
           throw new Error('Failed to generate speech');
         }
-
-        player.play(response.body!, () => console.log('Audio playback finished'));
+    
+        // Create audio stream
+        const audioStream = new ReadableStream({
+          async start(controller) {
+            const reader = response.body!.getReader();
+            const textDecoder = new TextDecoder();
+    
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+    
+                const text = textDecoder.decode(value);
+                const lines = text.split('\n');
+    
+                for (const line of lines) {
+                  if (!line) continue;
+    
+                  try {
+                    // Remove the `data: ` prefix
+                    const jsonString = line.replace(/^data:\s*/, '');
+                    const { event, data } = JSON.parse(jsonString);
+    
+                    if (event === 'chunk' && data.data) {
+                      // Convert base64 to Float32Array
+                      const binaryString = atob(data.data);
+                      const audioChunk = new Float32Array(binaryString.length / 4);
+    
+                      for (let i = 0; i < binaryString.length; i += 4) {
+                        const bytes = new Uint8Array(4);
+                        for (let j = 0; j < 4; j++) {
+                          bytes[j] = binaryString.charCodeAt(i + j);
+                        }
+                        const view = new DataView(bytes.buffer);
+                        audioChunk[i / 4] = view.getFloat32(0, true);
+                      }
+    
+                      controller.enqueue(new Uint8Array(audioChunk.buffer));
+                    } else if (event === 'done') {
+                      controller.close();
+                      break;
+                    }
+                  } catch (e) {
+                    console.error('Error parsing chunk:', e);
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Stream reading error:', error);
+              controller.error(error);
+            }
+          }
+        });
+    
+        // Play the audio stream
+        player.play(audioStream, () => console.log('Audio playback finished'));
+    
       } catch (error) {
         console.error('Error processing audio:', error);
       }
-    },
+    }
+    ,
   });
 
   
