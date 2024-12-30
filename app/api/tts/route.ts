@@ -17,11 +17,11 @@ export async function POST(request: Request) {
         "X-API-Key": CARTESIA_API_KEY!,
       },
       body: JSON.stringify({
-        model_id: "sonic-english",
+        model_id: "sonic",
         transcript: text,
         voice: {
           mode: "id",
-          id: "79a125e8-cd45-4c13-8a67-188112f4dd22",
+          id: "b7d50908-b17c-442d-ad8d-810c63997ed9",
         },
         output_format: {
           container: "raw",
