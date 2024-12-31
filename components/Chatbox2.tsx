@@ -16,7 +16,7 @@ export default function Chat() {
       const start=Date.now();
       setIsLoading(true);
       try {
-        const response = await fetch('/api/tts', {
+        const response = await fetch('/api/tts2', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
