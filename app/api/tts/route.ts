@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    const client = new CartesiaClient({ apiKey: process.env.CARTESIA_API_KEY });
+    const client = new CartesiaClient({ apiKey: process.env.NEXT_PUBLIC_CARTESIA_API_KEY });
     const { text } = await request.json();
 
     const response = await client.tts.sse({

@@ -1,4 +1,6 @@
-const CARTESIA_API_KEY = process.env.CARTESIA_API_KEY;
+
+
+const CARTESIA_API_KEY = process.env.NEXT_PUBLIC_CARTESIA_API_KEY;
 if (!CARTESIA_API_KEY) {
   throw new Error("Missing CARTESIA_API_KEY in environment variables");
 }
