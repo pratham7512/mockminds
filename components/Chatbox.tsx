@@ -2,94 +2,89 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Button } from './ui/button';
 import { useChat } from "ai/react";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import AlertDial from './alert';  
 import { usePlayer } from '@/lib/usePlayer';
+import { CartesiaClient } from "@cartesia/cartesia-js";
 
 export default function Chat() {
   const player=usePlayer()
   const latency = useRef<number>(0);
   const start=useRef<number>(0)
   const [isLoading, setIsLoading]= useState(false);
+
+  const client = useMemo(() => new CartesiaClient({ 
+    apiKey: process.env.NEXT_PUBLIC_CARTESIA_API_KEY 
+  }), []);
+
   const { messages, input, handleInputChange, handleSubmit, setMessages } = useChat({
     onFinish: async (message) => {
       if (message.role !== 'assistant') return;
       setIsLoading(true);
+      start.current = Date.now();
+
       try {
-        const response = await fetch('/api/tts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        const response = await client.tts.sse({
+          modelId: "sonic",
+          transcript: message.content,
+          voice: {
+            mode: "id",
+            id: "b7d50908-b17c-442d-ad8d-810c63997ed9",
+            experimentalControls: {
+              speed: 'normal',
+              emotion: ["anger:lowest"]
+            }
           },
-          body: JSON.stringify({ text: message.content }),
+          language: "en",
+          outputFormat: {
+            container: "raw",
+            encoding: "pcm_f32le",
+            sampleRate: 24000
+          }
         });
-    
-        if (!response.ok) {
-          throw new Error('Failed to generate speech');
-        }
-    
-        // Create audio stream
+
+        // Convert SSE stream to audio stream
         const audioStream = new ReadableStream({
           async start(controller) {
-            const reader = response.body!.getReader();
-            const textDecoder = new TextDecoder();
-    
             try {
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-    
-                const text = textDecoder.decode(value);
-                const lines = text.split('\n');
-    
-                for (const line of lines) {
-                  if (!line) continue;
-    
-                  try {
-                    // Remove the `data: ` prefix
-                    const jsonString = line.replace(/^data:\s*/, '');
-                    const { event, data } = JSON.parse(jsonString);
-    
-                    if (event === 'chunk' && data.data) {
-                      // Convert base64 to Float32Array
-                      const binaryString = atob(data.data);
-                      const audioChunk = new Float32Array(binaryString.length / 4);
-    
-                      for (let i = 0; i < binaryString.length; i += 4) {
-                        const bytes = new Uint8Array(4);
-                        for (let j = 0; j < 4; j++) {
-                          bytes[j] = binaryString.charCodeAt(i + j);
-                        }
-                        const view = new DataView(bytes.buffer);
-                        audioChunk[i / 4] = view.getFloat32(0, true);
-                      }
-    
-                      controller.enqueue(new Uint8Array(audioChunk.buffer));
-                    } else if (event === 'done') {
-                      controller.close();
-                      break;
+              for await (const chunk of response) {
+                if (chunk.type === 'chunk' && chunk.data) {
+                  // Convert base64 to binary
+                  const binaryString = atob(chunk.data);
+                  const audioChunk = new Float32Array(binaryString.length / 4);
+                  
+                  // Properly reconstruct float32 values
+                  for (let i = 0; i < binaryString.length; i += 4) {
+                    const bytes = new Uint8Array(4);
+                    for (let j = 0; j < 4; j++) {
+                      bytes[j] = binaryString.charCodeAt(i + j);
                     }
-                  } catch (e) {
-                    console.error('Error parsing chunk:', e);
+                    const view = new DataView(bytes.buffer);
+                    audioChunk[i / 4] = view.getFloat32(0, true); // true for little-endian
                   }
+                  
+                  controller.enqueue(new Uint8Array(audioChunk.buffer));
+                }
+                if (chunk.type === 'done') {
+                  controller.close();
+                  break;
                 }
               }
             } catch (error) {
-              console.error('Stream reading error:', error);
               controller.error(error);
+              console.error('Stream processing error:', error);
             }
           }
         });
         latency.current = Date.now() - start.current;
-        setIsLoading(false)
-        // Play the audio stream
-        player.play(audioStream, () => console.log('Audio playback finished'));
-    
+        setIsLoading(false);
+        player.play(audioStream, () => console.log('Playback finished'));
+
       } catch (error) {
-        console.error('Error processing audio:', error);
+        console.error('TTS error:', error);
+        setIsLoading(false);
       }
     }
-    ,
   });
 
   

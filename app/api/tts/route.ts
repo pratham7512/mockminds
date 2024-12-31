@@ -68,7 +68,6 @@ export async function POST(request: Request) {
 
 // onFinish: async (message) => {
 //   if (message.role !== 'assistant') return;
-//   const start=Date.now();
 //   setIsLoading(true);
 //   try {
 //     const response = await fetch('/api/tts', {
@@ -135,7 +134,7 @@ export async function POST(request: Request) {
 //         }
 //       }
 //     });
-//     latency.current = Date.now() - start;
+//     latency.current = Date.now() - start.current;
 //     setIsLoading(false)
 //     // Play the audio stream
 //     player.play(audioStream, () => console.log('Audio playback finished'));

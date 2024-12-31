@@ -55,3 +55,27 @@ export async function POST(request: Request) {
     return new Response("Voice synthesis failed", { status: 500 });
   }
 }
+
+
+// onFinish: async (message) => {
+//   if (message.role !== 'assistant') return;
+//   setIsLoading(true);
+//   try {
+//     const response = await fetch('/api/tts2', {
+//         method: 'POST',
+//         body: JSON.stringify({ text: message.content }),
+//       });
+    
+//         if (!response.ok) {
+//             throw new Error('Failed to generate speech');
+//         }
+//         latency.current = Date.now() - start.current;
+//         setIsLoading(false)
+//         player.play(response.body!, () => console.log('Audio playback finished'));
+//         } catch (error) {
+//             console.error('Error processing audio:', error);
+//         }
+        
+//       }
+
+//use this in frontend to access this endpoint
