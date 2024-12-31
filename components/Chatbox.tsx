@@ -21,8 +21,6 @@ export default function Chat() {
     onFinish: async (message) => {
       if (message.role !== 'assistant') return;
       setIsLoading(true);
-      start.current = Date.now();
-
       try {
         const response = await client.tts.sse({
           modelId: "sonic",
@@ -30,16 +28,12 @@ export default function Chat() {
           voice: {
             mode: "id",
             id: "b7d50908-b17c-442d-ad8d-810c63997ed9",
-            experimentalControls: {
-              speed: 'normal',
-              emotion: ["anger:lowest"]
-            }
           },
           language: "en",
           outputFormat: {
             container: "raw",
             encoding: "pcm_f32le",
-            sampleRate: 24000
+            sampleRate: 44100
           }
         });
 
