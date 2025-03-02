@@ -15,6 +15,7 @@ import {
     roomName: string;
     participantName: string;
     participantToken: string;
+    timestamp: number; // Add timestamp to track token generation time
   };
   
   export async function GET() {
@@ -29,9 +30,10 @@ import {
         throw new Error("LIVEKIT_API_SECRET is not defined");
       }
   
-      // Generate participant token
-      const participantIdentity = `voice_assistant_user_${Math.floor(Math.random() * 10_000)}`;
-      const roomName = `voice_assistant_room_${Math.floor(Math.random() * 10_000)}`;
+      // Generate participant token with timestamp for uniqueness
+      const timestamp = Date.now();
+      const participantIdentity = `voice_assistant_user_${Math.floor(Math.random() * 10_000)}_${timestamp}`;
+      const roomName = `voice_assistant_room_${Math.floor(Math.random() * 10_000)}_${timestamp}`;
       const participantToken = await createParticipantToken(
         { identity: participantIdentity },
         roomName,
@@ -43,8 +45,19 @@ import {
         roomName,
         participantToken: participantToken,
         participantName: participantIdentity,
+        timestamp
       };
-      return NextResponse.json(data);
+      
+      // Create response with no-cache headers
+      const response = NextResponse.json(data);
+      
+      // Set cache control headers to prevent caching
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      response.headers.set('Pragma', 'no-cache');
+      response.headers.set('Expires', '0');
+      response.headers.set('Surrogate-Control', 'no-store');
+      
+      return response;
     } catch (error) {
       if (error instanceof Error) {
         console.error(error);
