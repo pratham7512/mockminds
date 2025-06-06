@@ -12,6 +12,7 @@ import { Appbar } from './Appbar'
 import { useChat } from "ai/react";
 import { v4 as uuidv4 } from 'uuid';
 import MarkdownPreview from '@uiw/react-markdown-preview';
+import VoiceCallWidget from './VoiceCallWidget'
 
 
 
@@ -337,68 +338,8 @@ export default function Component() {
                 />
               )}
             </div>
-
-            <div className="p-4 border-t border-border relative">
-              {chatOpen && (
-                <div 
-                  ref={chatBoxRef}
-                  className="absolute bottom-full left-0 right-0 bg-card border border-border rounded-t-lg shadow-lg overflow-hidden "
-                  style={{ maxHeight: 'calc(75vh - 120px)', zIndex: 10 }}
-                >
-                  <div className="flex justify-between items-center p-2 bg-card">
-                    <span className="text-md text-white">chat</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setChatOpen(false)}
-                      className="h-6 w-6 text-gray-400 hover:text-white"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="px-4 overflow-y-auto" style={{ maxHeight: 'calc(75vh - 160px)' }}>
-                      {messages.length > 3
-                                && messages.map((m) => (
-                                    <div key={m.id} className="mb-4">
-                                      {m.content && m.id !== "-1" && messages.indexOf(m) !== 2 && (<div
-                                        className={`flex ${
-                                          m.role === "user"
-                                            ? "text-white justify-end"
-                                            : "text-muted-foreground justify-start"
-                                        } `}
-                                      >
-                                      
-                                        <div className={`${
-                                          m.role === "user" ? "bg-muted p-2 px-4" : ""
-                                        }`}>
-                                          {m.content}
-                                        </div>
-                                      </div>)}
-                                    </div>
-                                  ))}
-                            <div ref={messagesEndRef} /> {/* Ensure this is inside the chat box */}
-                  </div>
-                </div>
-              )}
-              <div className="relative">
-              <form onSubmit={handleSubmit} className="flex-shrink-0">
-                <Input
-                  ref={inputRef}
-                  type="text"
-                  placeholder="Ask a follow up..."
-                  value={input}
-                  onChange={handleInputChange}
-                  onFocus={() => setChatOpen(true)}
-                  className="w-full pr-10 py-3 bg-background text-md text-white border-background"
-                />
-                <Button 
-                  type="submit"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-transparent hover:bg-transparent p-1"
-                >
-                  <Send className="h-5 w-5 text-white focus:outline-none" />
-                </Button>
-              </form>
-              </div>
+            <div className="w-full h-full max-w-[300px] max-h-[30vh] mx-auto my-8">
+              <VoiceCallWidget className="w-full h-full" />
             </div>
           </CardContent>
         </Card>

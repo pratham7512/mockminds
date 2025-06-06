@@ -25,7 +25,7 @@ export default function InterviewDialog({ item }:{
   const [requirements, setRequirements] = useState('')
   const router = useRouter();
   const handleRedirect = () => {
-    router.push('/problem');
+    router.push('/chat');
   };
   return (
     <Dialog>

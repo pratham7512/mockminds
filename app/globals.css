@@ -52,13 +52,23 @@
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
     --lk-va-bar-width: 72px;
-    --lk-control-bar-height: unset;
+    --lk-control-bar-height: clamp(32px, 6vw, 48px);
   }
 
 }
 
 .agent-visualizer > .lk-audio-bar {
-  width: 72px;
+  width: 12vw;
+  min-width: 32px;
+  max-width: 72px;
+  transition: width 0.2s;
+}
+@media (max-width: 600px) {
+  .agent-visualizer > .lk-audio-bar {
+    width: 20vw;
+    min-width: 20px;
+    max-width: 48px;
+  }
 }
 
 .lk-agent-control-bar {
@@ -66,7 +76,12 @@
 }
 
 .lk-disconnect-button {
-  @apply h-[36px] hover:bg-[#6b221a] hover:text-[white] bg-[#31100c] border-[#6b221a];
+  @apply hover:bg-[#6b221a] hover:text-[white] bg-[#31100c] border-[#6b221a];
+  height: clamp(24px, 5vw, 36px);
+  width: clamp(24px, 5vw, 36px);
+  font-size: clamp(0.7rem, 2vw, 1rem);
+  padding: 0 clamp(0.25rem, 1vw, 0.75rem);
+  transition: all 0.2s;
 }
 
 @layer base {
@@ -76,5 +91,10 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.lk-room-container button,
+.lk-disconnect-button {
+  font-size: clamp(0.7rem, 2vw, 1rem);
 }
 
