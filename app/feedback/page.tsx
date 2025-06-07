@@ -1,163 +1,190 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { CheckCircle, AlertCircle, MessageSquare, TrendingUp } from "lucide-react"
 
-interface ConversationMessage {
-  role: "user" | "assistant";
-  content: string;
+interface FeedbackData {
+  clarity: number
+  relevance: number
+  technicalAccuracy: number
+  communication: number
+  overallScore: number
+  strengths: string[]
+  areasForImprovement: string[]
+  detailedFeedback: string
 }
 
-interface Evaluation {
-  completeness: number;
-  clarity: number;
-  technical_accuracy: number;
-}
-
-export default function FeedbackPage() {
-  const [messages, setMessages] = useState<ConversationMessage[]>([]);
-  const [referenceAnswers, setReferenceAnswers] = useState<string[]>([]);
-  const [evaluations, setEvaluations] = useState<(Evaluation | null)[]>([]);
-  const router = useRouter();
+export default function InterviewFeedback() {
+  const [feedback, setFeedback] = useState<FeedbackData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const savedMessages = localStorage.getItem("conversationMessages");
-    if (savedMessages) {
-      const parsedMessages = JSON.parse(savedMessages);
-      setMessages(parsedMessages);
-      setEvaluations(new Array(parsedMessages.length).fill(null));
-    }
-  }, []);
-
-  useEffect(() => {
-    async function fetchReferenceAnswers() {
-      if (messages.length === 0) return;
-
-      const answers = new Array(messages.length).fill("");
-      setReferenceAnswers(answers);
-
-      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-      for (let i = 0; i < messages.length; i++) {
-        const message = messages[i];
-        if (message.role === "assistant") {
-          try {
-            // Fetch reference answer
-            const response = await fetch("/api/feed", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ messages: [message] }),
-            });
-
-            if (response.ok) {
-              const result = await response.json();
-              answers[i] = result.result;
-              setReferenceAnswers([...answers]);
-
-              // Check for subsequent user answer
-              const nextMessage = messages[i + 1];
-              if (nextMessage?.role === "user") {
-                // Fetch evaluation
-                try {
-                  const evalResponse = await fetch(
-                    "https://mockminds-feedback.onrender.com/evaluate-feedback",
-                    {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify({
-                        question: message.content,
-                        user_answer: nextMessage.content,
-                        reference_answer: result.result,
-                      }),
-                    }
-                  );
-
-                  if (evalResponse.ok) {
-                    const evalData = await evalResponse.json();
-                    setEvaluations(prev => {
-                      const newEvals = [...prev];
-                      newEvals[i] = evalData;
-                      return newEvals;
-                    });
-                  }
-                } catch (error) {
-                  console.error("Evaluation fetch error:", error);
-                }
-              }
-            }
-          } catch (error) {
-            answers[i] = "Error fetching reference answer";
-            setReferenceAnswers([...answers]);
-          }
-
-          await delay(1000); // 1 second delay between requests
+    const fetchFeedback = async () => {
+      try {
+        const response = await fetch("https://mockmindsnode.onrender.com/dummy-feedback")
+        if (!response.ok) {
+          throw new Error("Failed to fetch feedback")
         }
+        const data = await response.json()
+        setFeedback(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred")
+      } finally {
+        setLoading(false)
       }
     }
 
-    fetchReferenceAnswers();
-  }, [messages]);
+    fetchFeedback()
+  }, [])
+
+  const getScoreColor = (score: number) => {
+    if (score >= 8) return "text-emerald-400"
+    if (score >= 6) return "text-amber-400"
+    return "text-red-400"
+  }
+
+  const getScoreBadgeVariant = (score: number) => {
+    if (score >= 8) return "default"
+    if (score >= 6) return "secondary"
+    return "destructive"
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading feedback...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+          <p className="text-red-400">Error: {error}</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!feedback) return null
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <Card className="max-w-4xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Conversation Feedback</CardTitle>
-          <p className="text-gray-600">Review your conversation and feedback</p>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Conversation History</h3>
-              <div className="space-y-3">
-                {messages.length > 0 ? (
-                  messages.map((message, index) => (
-                    <div key={index}>
-                      <div
-                        className={`p-4 rounded-lg ${
-                          message.role === "user" ? "bg-blue-900 text-white" : "bg-gray-100 text-gray-700"
-                        }`}
-                      >
-                        <p className="text-sm font-medium mb-1">
-                          {message.role === "user" ? "You" : "Assistant"}
-                        </p>
-                        <p className="">{message.content}</p>
-                      </div>
-                      {message.role === "assistant" && (
-                        <>
-                          <div className="mt-2 bg-green-900 p-4 rounded-lg">
-                            <p className="text-sm font-medium text-white">Reference Answer:</p>
-                            <p className="text-gray-100">
-                              {referenceAnswers[index] || "Loading reference answer..."}
-                            </p>
-                          </div>
-                          {evaluations[index] && (
-                            <div className="mt-2 bg-purple-900 p-4 rounded-lg">
-                              <p className="text-sm font-medium text-white">Evaluation:</p>
-                              <div className="text-gray-100 space-y-1">
-                                <p>Completeness: {evaluations[index]?.completeness}</p>
-                                <p>Clarity: {evaluations[index]?.clarity}</p>
-                                <p>Technical Accuracy: {evaluations[index]?.technical_accuracy}</p>
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-500 italic">No conversation history found</p>
-                )}
+    <div className="min-h-screen bg-black text-white">
+      <div className="max-w-4xl mx-auto px-6 py-12">
+        {/* Header */}
+        <div className="mb-12">
+          <h1 className="text-4xl font-semibold text-white mb-3">Interview Feedback</h1>
+          <p className="text-lg text-gray-400">Performance analysis and recommendations</p>
+        </div>
+
+        <div className="space-y-8">
+          {/* Overall Score */}
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="pt-8 pb-8">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <TrendingUp className="h-5 w-5 text-gray-400" />
+                  <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">Overall Score</span>
+                </div>
+                <div className="text-5xl font-bold mb-6">
+                  <span className={getScoreColor(feedback.overallScore)}>{feedback.overallScore}</span>
+                  <span className="text-xl text-gray-500 ml-1">/10</span>
+                </div>
+                <Progress value={feedback.overallScore * 10} className="w-full max-w-sm mx-auto h-2" />
               </div>
-            </div>
+            </CardContent>
+          </Card>
+
+          {/* Score Breakdown */}
+          <Card className="bg-gray-900 border-gray-800">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl text-white">Performance Metrics</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {[
+                { label: "Clarity", score: feedback.clarity },
+                { label: "Relevance", score: feedback.relevance },
+                { label: "Technical Accuracy", score: feedback.technicalAccuracy },
+                { label: "Communication", score: feedback.communication },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center justify-between">
+                  <span className="font-medium text-gray-200">{item.label}</span>
+                  <div className="flex items-center gap-4">
+                    <Progress value={item.score * 10} className="w-32 h-2" />
+                    <Badge variant={getScoreBadgeVariant(item.score)} className="min-w-[3rem] font-medium">
+                      {item.score}/10
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Strengths */}
+            <Card className="bg-gray-900 border-gray-800">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-xl text-white">
+                  <CheckCircle className="h-5 w-5 text-emerald-400" />
+                  Strengths
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-4">
+                  {feedback.strengths.map((strength, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mt-2.5 flex-shrink-0"></div>
+                      <span className="text-gray-300 leading-relaxed">{strength}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+
+            {/* Areas for Improvement */}
+            <Card className="bg-gray-900 border-gray-800">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-xl text-white">
+                  <AlertCircle className="h-5 w-5 text-amber-400" />
+                  Areas for Improvement
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-4">
+                  {feedback.areasForImprovement.map((area, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <div className="w-1.5 h-1.5 bg-amber-400 rounded-full mt-2.5 flex-shrink-0"></div>
+                      <span className="text-gray-300 leading-relaxed">{area}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Detailed Feedback */}
+          <Card className="bg-gray-900 border-gray-800">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-xl text-white">
+                <MessageSquare className="h-5 w-5 text-gray-400" />
+                Detailed Analysis
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-300 leading-relaxed text-base">{feedback.detailedFeedback}</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
-  );
+  )
 }

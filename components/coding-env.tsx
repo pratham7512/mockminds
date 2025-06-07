@@ -15,11 +15,13 @@ import MarkdownPreview from '@uiw/react-markdown-preview';
 import VoiceCallWidget from './VoiceCallWidget'
 import { Room } from "livekit-client";
 import { RoomContext} from "@livekit/components-react";
+import VoiceCallTimer from './VoiceCallTimer'
+import { useRouter } from 'next/navigation';
 
 
 
 export default function Component() {
-  const [mode, setMode] = useState('code')
+  const [mode, setMode] = useState<'code' | 'text' | 'draw'>('code')
   const [language, setLanguage] = useState('javascript')
   const [drawTool, setDrawTool] = useState('pen')
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -31,6 +33,7 @@ export default function Component() {
   const [codeContent, setCodeContent] = useState<{ [key: string]: string }>({})
   const [textContent, setTextContent] = useState('')
   const room = useContext(RoomContext);
+  const router = useRouter();
 
   const languages = ['javascript', 'python', 'java', 'cpp', 'sql', 'typescript']
 
@@ -248,115 +251,120 @@ export default function Component() {
   }, []);
 
   return (
-
-      <div className="flex flex-col h-screen bg-background text-white">
-        <Appbar/>
-
-        {/* Main content */}
-        <div className="flex-1 pb-4 flex space-x-10 overflow-hidden mx-10">
-          {/* Problem Statement Area */}
-          <Card className="w-2/5 overflow-hidden bg-background border-muted ">
-            <CardContent className="p-0 h-full">
-              <div className="h-full overflow-y-auto p-4">
-                <div className="prose prose-invert">
-              <MarkdownPreview source={messages.length > 2 ? messages[2].content : 'Loading...'} style={{ backgroundColor: "#09090b",fontSize: '0.95rem'}} />
-                </div>
+    <div className="flex flex-col h-screen bg-background text-white relative">
+      <Appbar/>
+      {/* Timer at top center */}
+      <div className="absolute left-1/2 top-0 z-50 transform -translate-x-1/2 mt-2">
+        <VoiceCallTimer redirectTo="/feedback" durationMinutes={30} />
+      </div>
+      {/* Main content */}
+      <div className="flex-1 pb-4 flex space-x-10 overflow-hidden mx-10">
+        {/* Problem Statement Area */}
+        <Card className="w-2/5 overflow-hidden bg-background border-muted ">
+          <CardContent className="p-0 h-full">
+            <div className="h-full overflow-y-auto p-4">
+              <div className="prose prose-invert">
+                <MarkdownPreview source={messages.length > 2 ? messages[2].content : 'Loading...'} style={{ backgroundColor: "#09090b",fontSize: '0.95rem'}} />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Coding Area */}
-          <Card className="w-3/5 overflow-hidden bg-background border-muted">
-            <CardContent className="p-0 h-full flex flex-col">
-              <div className="p-4 border-b border-border flex justify-between items-center">
-                <div className="flex items-center space-x-2">
-                  {mode === 'code' && (
-                    <Select value={language} onValueChange={setLanguage}>
-                      <SelectTrigger className="w-[180px] bg-border text-white border-border">
-                        <SelectValue placeholder="Select Language" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {languages.map((lang) => (
-                          <SelectItem key={lang} value={lang}>{lang}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  {mode === 'draw' && (
-                    <ToggleGroup type="single" value={drawTool} onValueChange={(value) => value && setDrawTool(value)}>
-                      <ToggleGroupItem value="pen" className="data-[state=on]:bg-white data-[state=on]:text-black">
-                        <Pen className="w-4 h-4 mr-2" />
-                        Pen
-                      </ToggleGroupItem>
-                      <ToggleGroupItem value="eraser" className="data-[state=on]:bg-white data-[state=on]:text-black">
-                        <Eraser className="w-4 h-4 mr-2" />
-                        Eraser
-                      </ToggleGroupItem>
-                    </ToggleGroup>
-                  )}
-                </div>
-                <ToggleGroup type="single" value={mode} onValueChange={(value) => value && setMode(value)}>
-                  <ToggleGroupItem value="code" className="data-[state=on]:bg-white data-[state=on]:text-black">Code</ToggleGroupItem>
-                  <ToggleGroupItem value="text" className="data-[state=on]:bg-white data-[state=on]:text-black">Text</ToggleGroupItem>
-                  <ToggleGroupItem value="draw" className="data-[state=on]:bg-white data-[state=on]:text-black">Draw</ToggleGroupItem>
-                </ToggleGroup>
-              </div>
-
-              <div className="flex-1 p-4 relative overflow-hidden">
+        {/* Coding Area */}
+        <Card className="w-3/5 overflow-hidden bg-background border-muted">
+          <CardContent className="p-0 h-full flex flex-col">
+            <div className="p-4 border-b border-border flex justify-between items-center">
+              <div className="flex items-center space-x-2">
                 {mode === 'code' && (
-                  <div className="overflow-y-auto h-full bg-background rounded-xl">
-                      <CodeEditor
-                        value={code}
-                        language={language}
-                        minHeight={200}
-                        maxLength={300}
-                        placeholder="Please enter JS code."
-                        onChange={(evn) => setCode(evn.target.value)}
-                        padding={15}
-                        style={{
-                          backgroundColor: "#09090b",
-                          fontFamily: 'ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace',
-                          fontSize: "15px"
-                        }}
-                      />
-                  </div>
-                )}
-                {mode === 'text' && (
-                  <Textarea
-                    className="w-full h-full p-5 bg-background text-white"
-                    placeholder="Write your text here..."
-                    value={textContent}
-                    onChange={(e) => setTextContent(e.target.value)}
-                  />
+                  <Select value={language} onValueChange={setLanguage}>
+                    <SelectTrigger className="w-[180px] bg-border text-white border-border">
+                      <SelectValue placeholder="Select Language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {languages.map((lang) => (
+                        <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
                 {mode === 'draw' && (
-                  <canvas
-                    ref={canvasRef}
-                    width={500}
-                    height={400}
-                    className="w-full h-full bg-background focus:outline-none rounded cursor-crosshair"
-                    onMouseDown={startDrawing}
-                    onMouseUp={stopDrawing}
-                    onMouseOut={stopDrawing}
-                    onMouseMove={draw}
-                  />
+                  <ToggleGroup type="single" value={drawTool} onValueChange={(value) => value && setDrawTool(value)}>
+                    <ToggleGroupItem value="pen" className="data-[state=on]:bg-white data-[state=on]:text-black">
+                      <Pen className="w-4 h-4 mr-2" />
+                      Pen
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="eraser" className="data-[state=on]:bg-white data-[state=on]:text-black">
+                      <Eraser className="w-4 h-4 mr-2" />
+                      Eraser
+                    </ToggleGroupItem>
+                  </ToggleGroup>
                 )}
               </div>
-              <div className="w-full h-full max-w-[300px] max-h-[30vh] mx-auto my-8">
-                {room && (
-                  <VoiceCallWidget room={room} className="w-full h-full" />
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              <ToggleGroup type="single" value={mode} onValueChange={(value) => value && setMode(value as 'code' | 'text' | 'draw')}>
+                <ToggleGroupItem value="code" className="data-[state=on]:bg-white data-[state=on]:text-black">Code</ToggleGroupItem>
+                <ToggleGroupItem value="text" className="data-[state=on]:bg-white data-[state=on]:text-black">Text</ToggleGroupItem>
+                <ToggleGroupItem value="draw" className="data-[state=on]:bg-white data-[state=on]:text-black">Draw</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
 
-        {/* New Button Bar */}
-        <div className="flex justify-end p-1 px-6 bg-background">
-          <button className="mx-4 my-2 px-3 pt-1 pb-2 rounded-lg text-center bg-white font-medium text-black hover:bg-gray-300">restart</button>
-          <button className="mx-4 my-2 px-3 pt-1 pb-2 rounded-lg text-center bg-white font-medium text-black hover:bg-gray-300">submit</button>
-        </div>
+            <div className="flex-1 p-4 relative overflow-hidden">
+              {mode === 'code' && (
+                <div className="overflow-y-auto h-full bg-background rounded-xl">
+                    <CodeEditor
+                      value={code}
+                      language={language}
+                      minHeight={200}
+                      maxLength={300}
+                      placeholder="Please enter JS code."
+                      onChange={(evn) => setCode(evn.target.value)}
+                      padding={15}
+                      style={{
+                        backgroundColor: "#09090b",
+                        fontFamily: 'ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace',
+                        fontSize: "15px"
+                      }}
+                    />
+                </div>
+              )}
+              {mode === 'text' && (
+                <Textarea
+                  className="w-full h-full p-5 bg-background text-white"
+                  placeholder="Write your text here..."
+                  value={textContent}
+                  onChange={(e) => setTextContent(e.target.value)}
+                />
+              )}
+              {mode === 'draw' && (
+                <canvas
+                  ref={canvasRef}
+                  width={500}
+                  height={400}
+                  className="w-full h-full bg-background focus:outline-none rounded cursor-crosshair"
+                  onMouseDown={startDrawing}
+                  onMouseUp={stopDrawing}
+                  onMouseOut={stopDrawing}
+                  onMouseMove={draw}
+                />
+              )}
+            </div>
+            <div className="w-full h-full max-w-[300px] max-h-[30vh] mx-auto my-8">
+              {room && (
+                <VoiceCallWidget room={room} className="w-full h-full" />
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
+      {/* New Button Bar */}
+      <div className="flex justify-end p-1 px-4 bg-background">
+        <button
+          className="mx-4 my-2 px-8 py-4 text-md rounded-none border-gray-500 bg-black text-gray-500 hover:text-white hover:bg-blue-500 hover:border-gray-white"
+          onClick={() => router.push('/feedback')}
+        >
+          submit
+        </button>
+      </div>
+    </div>
   )
 }
