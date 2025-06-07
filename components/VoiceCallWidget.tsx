@@ -6,21 +6,19 @@ import {
   BarVisualizer,
   DisconnectButton,
   RoomAudioRenderer,
-  RoomContext,
   VoiceAssistantControlBar,
   useVoiceAssistant,
 } from "@livekit/components-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Room, RoomEvent } from "livekit-client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import type { ConnectionDetails } from "@/app/api/connection-details/route";
 import React from "react";
 
-const CONNECTION_TIMEOUT_MS = 5 * 60 * 1000; // 30 minutes timeout
+const CONNECTION_TIMEOUT_MS = 300 * 60 * 1000; // 30 minutes timeout
 
-export default function VoiceCallWidget({ className = "", style = {} }: { className?: string; style?: React.CSSProperties }) {
-  const [room] = useState(new Room());
-  const [isReconnecting, setIsReconnecting] = useState(false);
+export default function VoiceCallWidget({ room, className = "", style = {} }: { room: Room; className?: string; style?: React.CSSProperties }) {
+  const [isReconnecting, setIsReconnecting] = React.useState(false);
 
   const onConnectButtonClicked = useCallback(async () => {
     try {
@@ -59,7 +57,7 @@ export default function VoiceCallWidget({ className = "", style = {} }: { classN
     } catch (error) {
       console.error('Connection error:', error);
       // Clear stored details if there's an error
-      //localStorage.removeItem('voiceCallConnectionDetails');
+      localStorage.removeItem('voiceCallConnectionDetails');
       throw error;
     }
   }, [room]);
@@ -104,11 +102,9 @@ export default function VoiceCallWidget({ className = "", style = {} }: { classN
 
   return (
     <div className={className} style={style}>
-      <RoomContext.Provider value={room}>
-        <div className="lk-room-container w-full h-full">
-          <SimpleVoiceAssistant onConnectButtonClicked={onConnectButtonClicked} onManualDisconnect={handleManualDisconnect} />
-        </div>
-      </RoomContext.Provider>
+      <div className="lk-room-container w-full h-full">
+        <SimpleVoiceAssistant onConnectButtonClicked={onConnectButtonClicked} onManualDisconnect={handleManualDisconnect} />
+      </div>
     </div>
   );
 }
